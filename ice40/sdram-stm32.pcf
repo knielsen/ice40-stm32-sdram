@@ -1,0 +1,90 @@
+# ICE40 hx8k breakout board stuff.
+#set_io LED[0] B5  # conflict with mem_ba[0]
+#set_io LED[1] B4  # conflict with mem_a[0]
+#set_io LED[2] A2  # conflict with mem_a[2]
+#set_io LED[3] A1  # conflict with mem_a[3]
+#set_io LED[4] C5  # conflict with mem_cs1
+#set_io LED[5] C4  # conflict with mem_ba[0]
+#set_io LED[6] B3  # conflict with mem_a[1]
+#set_io LED[7] C3  # conflict with mem_a[10]
+set_io crystal_clk J3
+
+# STM32/FSMC stuff.
+set_io aNE N16
+set_io aNOE P16
+set_io aNWE M15
+set_io aA[0] D15
+set_io aA[1] E16
+set_io aA[2] D14
+set_io aA[3] D16
+set_io aA[4] B16
+set_io aA[5] C16
+set_io aA[6] F16
+set_io aA[7] E14
+set_io aD[0] M16
+set_io aD[1] L16
+set_io aD[2] R15
+set_io aD[3] P15
+set_io aD[4] G16
+set_io aD[5] F15
+set_io aD[6] H16
+set_io aD[7] G15
+set_io aD[8] J15
+set_io aD[9] H14
+set_io aD[10] G14
+set_io aD[11] F14
+set_io aD[12] K14
+set_io aD[13] J14
+set_io aD[14] K15
+set_io aD[15] K16
+
+# SDRAM stuff.
+set_io sdram_gpio[0] A15
+set_io sdram_gpio[1] B15
+set_io sdram_gpio[2] B14
+set_io sdram_gpio[3] B13
+set_io sdram_gpio[4] B10
+set_io sdram_gpio[5] B12
+
+set_io mem_d[0] B11
+set_io mem_d[1] A10
+set_io mem_d[2] C9
+set_io mem_d[3] A9
+set_io mem_d[4] B9
+set_io mem_d[5] B8
+set_io mem_d[6] A7
+set_io mem_d[7] B7
+set_io mem_d[8] M11
+set_io mem_d[9] N10
+set_io mem_d[10] P13
+set_io mem_d[11] N12
+set_io mem_d[12] T14
+set_io mem_d[13] T13
+set_io mem_d[14] T16
+set_io mem_d[15] T15
+
+set_io mem_a[0] B4
+set_io mem_a[1] B3
+set_io mem_a[2] A2
+set_io mem_a[3] A1
+set_io mem_a[4] T6
+set_io mem_a[5] R6
+set_io mem_a[6] T7
+set_io mem_a[7] R9
+set_io mem_a[8] T9
+set_io mem_a[9] P9
+set_io mem_a[10] C3
+set_io mem_a[11] P8
+set_io mem_a[12] R10
+
+set_io mem_ras B6
+set_io mem_cas C6
+set_io mem_dqm[0] T11
+set_io mem_dqm[1] C7
+set_io mem_clk P10
+set_io mem_cke T10
+set_io mem_we A6
+set_io mem_ba[0] C4
+set_io mem_ba[1] B5
+set_io mem_cs1 C5
+set_io mem_cs2 A5

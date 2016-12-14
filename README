@@ -1,0 +1,7 @@
+Testing ICE40 sdram controller with STM32 daughterboard.
+
+The sdram-controller source files are by Lattice Semiconductor, see
+the top of the files for license information.
+
+Some of the STM32 source files are by ST Microsystems, again see top
+of files for license information.
