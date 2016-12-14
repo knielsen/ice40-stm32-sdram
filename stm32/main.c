@@ -367,7 +367,7 @@ ice40_sdram_test1(void)
     serial_output_hex(USART1, val);
     serial_puts(USART1, "\r\n");
 
-    write_fpga(PERIPH_REG_ADR_HIGH, (uint16_t)0x8000 + counter);
+    write_fpga(PERIPH_REG_ADR_HIGH, (uint16_t)0x0800 + counter);
     val = read_fpga(PERIPH_REG_ADR_HIGH);
     serial_puts(USART1, "Read after write adr_high: ");
     serial_output_hex(USART1, val);

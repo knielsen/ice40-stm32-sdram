@@ -2,8 +2,8 @@ parameter DW = 16;
 parameter AW = 8;
 
 parameter PERIPH_REG_ADR_LOW = 8'h00;
-parameter PERIPH_REG_ADR_HIGH = 8'h02;
-parameter PERIPH_REG_DATA = 8'h04;
+parameter PERIPH_REG_ADR_HIGH = 8'h01;
+parameter PERIPH_REG_DATA = 8'h02;
 
 
 module pllclk (input ext_clock, output pll_clock, input nrst, output lock);
@@ -199,9 +199,9 @@ module top (
    always @(*) begin
       case (fsmc_r_adr)
 	PERIPH_REG_ADR_LOW:
-	  fsmc_r_data = {16{cur_adr[14:0], cur_status_busy}};
+	  fsmc_r_data = {cur_adr[14:0], cur_status_busy};
 	PERIPH_REG_ADR_HIGH:
-	  fsmc_r_data = {16{cur_adr[26:15]}};
+	  fsmc_r_data = {4'b0000, cur_adr[26:15]};
 	PERIPH_REG_DATA:
 	  fsmc_r_data = cur_value;
 	default:
