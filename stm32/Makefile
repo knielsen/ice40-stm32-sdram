@@ -116,7 +116,13 @@ flash: $(PROJ_NAME).elf
 dfu: $(PROJ_NAME).elf
 	dfu-util --download $(PROJ_NAME).bin --device 0483:df11 --alt 0 -s 0x08000000
 
-.PHONY: debug
+tty:
+	stty -F/dev/ttyUSB1 raw -echo -hup cs8 -parenb -cstopb 115200
+
+cat: tty
+	cat /dev/ttyUSB1
+
+.PHONY: debug tty cat
 debug:
 # before you start gdb, you must start st-util
 	$(GDB) $(PROJ_NAME).elf

@@ -13,8 +13,10 @@ module pllclk (input ext_clock, output pll_clock, input nrst, output lock);
    assign bypass = 1'b0;
 
    // DIVR=0 DIVF=71 DIVQ=3  freq=12/1*72/8 = 108 MHz
+   // DIVR=0 DIVF=47 DIVQ=4  freq=12/1*48/16 = 36 MHz
    SB_PLL40_CORE #(.FEEDBACK_PATH("SIMPLE"), .PLLOUT_SELECT("GENCLK"),
-		   .DIVR(4'd0), .DIVF(7'b1000111), .DIVQ(3'b011),
+		   .DIVR(4'd0), .DIVF(7'b1000111), .DIVQ(3'b011),    // 108 MHz
+		   //.DIVR(4'd0), .DIVF(7'b0101111), .DIVQ(3'b100),  // 36 MHz
 		   .FILTER_RANGE(3'b001)
    ) mypll1 (.REFERENCECLK(ext_clock),
 	    .PLLOUTGLOBAL(pll_clock), .PLLOUTCORE(dummy_out), .LOCK(lock1),
@@ -32,7 +34,9 @@ module top (
    input [AW-1:0] aA,
    inout [DW-1:0] aD,
    // SDRAM
-   input [5:0] 	  sdram_gpio,
+   output 	  sdram_gpio1, sdram_gpio2,
+   input 	  sdram_gpio3, sdram_gpio4,
+   input 	  sdram_gpio5,
    inout [DW-1:0] mem_d,
    output [12:0]  mem_a,
    output 	  mem_ras,
@@ -52,7 +56,6 @@ module top (
    assign pll_nrst = 1'b1;
    pllclk my_pll(crystal_clk, clk, pll_nrst, lock);
 
-
    // Reset control (the sdram controller needs a reset signal).
    reg 		  st_after_startup = 0;
    reg [1:0] 	  startup_counter = 0'b00;
@@ -70,7 +73,7 @@ module top (
    // Type 101001 is output with tristate/enable and simple input.
    SB_IO #(.PIN_TYPE(6'b1010_01), .PULLUP(1'b0))
      io_Dn[DW-1:0](.PACKAGE_PIN(aD),
-	   .OUTPUT_ENABLE(fsmc_io_d_output),
+	   .OUTPUT_ENABLE({16{fsmc_io_d_output}}),
 	   .D_OUT_0(aDn_output),
 	   .D_IN_0(aDn_input)
 	   );
@@ -80,7 +83,7 @@ module top (
    wire [DW-1:0]  sdram_i_dq;
    SB_IO #(.PIN_TYPE(6'b1010_01), .PULLUP(1'b0))
      io_mem_d[DW-1:0](.PACKAGE_PIN(mem_d),
-	   .OUTPUT_ENABLE(sdram_busdir),
+	   .OUTPUT_ENABLE({16{sdram_busdir}}),
 	   .D_OUT_0(sdram_o_dq),
 	   .D_IN_0(sdram_i_dq)
 	   );
@@ -108,11 +111,12 @@ module top (
    wire 	 sdram_busy;
    wire 	 sdram_init_done;
    wire 	 sdram_ack;
-   wire 	 sdram_o_addr;
-   wire 	 sdram_o_blkaddr;
+   wire [12:0] 	 sdram_o_addr;
+   wire [1:0] 	 sdram_o_blkaddr;
    wire 	 sdram_casn, sdram_cke, sdram_csn, sdram_dqm, sdram_rasn, sdram_wen, sdram_o_clk;
-   reg 		 sdram_data_in, sdram_data_out;
-   reg 		 sdram_i_addr;
+   reg [DW-1:0]  sdram_data_in;
+   reg [DW-1:0]  sdram_data_out;
+   reg [26:0] 	 sdram_i_addr;
    reg 		 sdram_adv;
    wire 	 sdram_i_clk;
    wire 	 sdram_rst;
@@ -193,6 +197,10 @@ module top (
    // State machine states.
    reg 		 st_pending_read, st_doing_read, st_pending_write, st_doing_write;
 
+   // For debugging, can expose signals here on sdram pcb gpio header.
+   assign sdram_gpio1 = 1'b0;
+   assign sdram_gpio2 = 1'b0;
+
    // Decode FSMC read request.
    // We have no side effects on reads, so we can ignore fsmc_do_read and just
    // decode combinatorially the read address to provide the data-to-read.
@@ -227,11 +235,11 @@ module top (
 	    sdram_i_addr <= {27{cur_adr[26:15], fsmc_w_data[15:1]}};
 	 if (fsmc_w_data[0]) begin
 	       // Start a write.
-	       sdram_rwn <= 1;
+	       sdram_rwn <= 0;
 	       sdram_data_in <= cur_value;
 	    end else begin
 	       // Start a read.
-	       sdram_rwn <= 0;
+	       sdram_rwn <= 1;
 	    end
 	 end
       end
@@ -249,13 +257,15 @@ module top (
 
    // Handle address valid (sdram_adv) assertion - this is what starts
    // a request towards the sdram controller.
-   // The sdram_adv signal is asserted for one clock cycle, at the point
-   // where a read/write has been requested from the STM32 and we detect
-   // that the sdram controller is idle.
+   // The sdram_adv signal is asserted the cycle after a read/write request
+   // from the STM32 has arrived and the sdram controller is idle. It remains
+   // asserted until acknowledged by the sdram controller.
+   // ToDo: could maybe assert adv already when setting _pending, to
+   // allow back-to-back operation and save one clockcycle?
    always @(posedge clk) begin
       if ((st_pending_read || st_pending_write) && sdram_idle)
 	sdram_adv <= 1;
-      else if (st_doing_read || st_doing_write)
+      else if ((st_doing_read || st_doing_write) && sdram_ack)
 	sdram_adv <= 0;
    end
 
@@ -280,8 +290,13 @@ module top (
 
       if (st_pending_write && sdram_idle)
 	st_doing_write <= 1;
-      else if (st_doing_write && sdram_write_done)
+      else if (st_doing_write && (sdram_write_done | (sdram_idle && !sdram_adv))) begin
+	// For some reason we occasionally seem to miss the sdram_write_done
+	// signal here. So added the extra condition (sdram_idle && !sdram_adv)
+	// to avoid hanging in this case. Though would be good to find the
+	// root cause of this...
 	st_doing_write <= 0;
+      end
       // Maybe could use sdram_ack instead of sdram_write_done, but let's keep
       // things simple for now. A better write optimisation would anyway be
       // to have a write queue.

@@ -345,11 +345,43 @@ read_fpga(uint32_t offset)
 
 __attribute__((unused))
 static void
+write_sdram(uint32_t addr, uint16_t val)
+{
+  uint16_t addr_high = (addr >> 16);
+  uint16_t addr_low = (addr & 0xfffe);
+  write_fpga(PERIPH_REG_DATA, val);
+  write_fpga(PERIPH_REG_ADR_HIGH, addr_high);
+  write_fpga(PERIPH_REG_ADR_LOW, addr_low | 1);
+  // Wait until operation done.
+  while (read_fpga(PERIPH_REG_ADR_LOW) & 1)
+    ;
+}
+
+
+__attribute__((unused))
+static uint16_t
+read_sdram(uint32_t addr)
+{
+  uint16_t addr_high = (addr >> 16);
+  uint16_t addr_low = (addr & 0xfffe);
+  write_fpga(PERIPH_REG_ADR_HIGH, addr_high);
+  write_fpga(PERIPH_REG_ADR_LOW, addr_low | 0);
+  // Wait until operation done.
+  while (read_fpga(PERIPH_REG_ADR_LOW) & 1)
+    ;
+  return read_fpga(PERIPH_REG_DATA);
+}
+
+
+__attribute__((unused))
+static void
 ice40_sdram_test1(void)
 {
   uint16_t val;
   uint32_t ledstate;
   uint16_t counter;
+  uint16_t v1, v2, v3, v4;
+  uint16_t status1, status2, status3, status4;
 
   ledstate = 0;
   counter = 0;
@@ -378,11 +410,200 @@ ice40_sdram_test1(void)
     serial_output_hex(USART1, val);
     serial_puts(USART1, "\r\n");
 
+    // Execute a write-to-SDRAM.
+    status1 = read_fpga(0x10);
+    serial_puts(USART1, "Status pre: ");
+    serial_output_hex(USART1, status1);
+    serial_puts(USART1, "\r\n");
+
+    write_fpga(PERIPH_REG_ADR_HIGH, 0x0006);
+    write_fpga(PERIPH_REG_DATA, 0xfd00 | (counter & 0xffff));
+    write_fpga(PERIPH_REG_ADR_LOW, 0x0101);
+    v1 = read_fpga(PERIPH_REG_ADR_LOW);
+    v2 = read_fpga(PERIPH_REG_ADR_LOW);
+    v3 = read_fpga(PERIPH_REG_ADR_LOW);
+    v4 = read_fpga(PERIPH_REG_ADR_LOW);
+    serial_puts(USART1, "Attempt to do write: ");
+    serial_output_hex(USART1, v1);
+    serial_puts(USART1, " ");
+    serial_output_hex(USART1, v2);
+    serial_puts(USART1, " ");
+    serial_output_hex(USART1, v3);
+    serial_puts(USART1, " ");
+    serial_output_hex(USART1, v4);
+    serial_puts(USART1, "\r\n");
+    // Execute a write-to-SDRAM.
+    status2 = read_fpga(0x10);
+    serial_puts(USART1, "Status post-write: ");
+    serial_output_hex(USART1, status2);
+    serial_puts(USART1, "\r\n");
+
+    // Execute a read-from-SDRAM.
+    write_fpga(PERIPH_REG_DATA, 0xabad);
+    status3 = read_fpga(0x10);
+    serial_puts(USART1, "Status pre-read: ");
+    serial_output_hex(USART1, status3);
+    serial_puts(USART1, "\r\n");
+    write_fpga(PERIPH_REG_ADR_LOW, 0x0100);
+    v1 = read_fpga(PERIPH_REG_ADR_LOW);
+    v2 = read_fpga(PERIPH_REG_ADR_LOW);
+    v3 = read_fpga(PERIPH_REG_ADR_LOW);
+    val = read_fpga(PERIPH_REG_DATA);
+    v4 = read_fpga(PERIPH_REG_ADR_LOW);
+    serial_puts(USART1, "Attempt to do read: ");
+    serial_output_hex(USART1, v1);
+    serial_puts(USART1, " ");
+    serial_output_hex(USART1, v2);
+    serial_puts(USART1, " ");
+    serial_output_hex(USART1, v3);
+    serial_puts(USART1, " ");
+    serial_output_hex(USART1, val);
+    serial_puts(USART1, " ");
+    serial_output_hex(USART1, v4);
+    serial_puts(USART1, "\r\n");
+    status4 = read_fpga(0x10);
+    serial_puts(USART1, "Status post-read: ");
+    serial_output_hex(USART1, status4);
+    serial_puts(USART1, "\r\n");
+
     ++counter;
     if ((ledstate = !ledstate))
       led1_on();
     else
       led1_off();
+    delay(MCU_HZ/3);
+  }
+}
+
+
+__attribute__((unused))
+static void
+ice40_sdram_test2(void)
+{
+  uint32_t ledstate;
+  uint16_t counter;
+  uint16_t v1, v2, v3, v4, v5;
+
+  ledstate = 0;
+  counter = 0;
+  for(;;) {
+    write_sdram(0x1238, (counter+3)&0xffff);
+    write_sdram(0x1232, counter&0xffff);
+    write_sdram(0x1236, (counter+2)&0xffff);
+    write_sdram(0x1234, (counter+1)&0xffff);
+    v1 = read_sdram(0x1232);
+    //delay(MCU_HZ/3/1000000*100);
+    v2 = read_sdram(0x1234);
+    v3 = read_sdram(0x1236);
+    v4 = read_sdram(0x1238);
+    v5 = read_sdram(0x1232);
+    serial_puts(USART1, "Readback after write ");
+    serial_output_hex(USART1, (counter&0xffff));
+    serial_puts(USART1, ": ");
+    serial_output_hex(USART1, v1);
+    serial_puts(USART1, " ");
+    serial_output_hex(USART1, v2);
+    serial_puts(USART1, ": ");
+    serial_output_hex(USART1, v3);
+    serial_puts(USART1, " ");
+    serial_output_hex(USART1, v4);
+    serial_puts(USART1, " ");
+    serial_output_hex(USART1, v5);
+    serial_puts(USART1, "\r\n");
+
+    ++counter;
+    if ((ledstate = !ledstate))
+      led1_on();
+    else
+      led1_off();
+    if (counter & 2)
+      led2_on();
+    else
+      led2_off();
+    delay(MCU_HZ/3);
+  }
+}
+
+
+__attribute__((unused))
+static void
+ice40_sdram_test3(void)
+{
+  uint32_t ledstate;
+  uint16_t counter;
+  uint16_t v1, v2, v3, v4, v5;
+
+  ledstate = 0;
+  counter = 0;
+  for(;;) {
+    write_fpga(PERIPH_REG_ADR_HIGH, 0x2222);
+    v1 = read_fpga(PERIPH_REG_ADR_HIGH);
+    write_fpga(PERIPH_REG_ADR_HIGH, 0x4444);
+    v2 = read_fpga(PERIPH_REG_ADR_HIGH);
+    write_fpga(PERIPH_REG_ADR_HIGH, 0x6666);
+    v3 = read_fpga(PERIPH_REG_ADR_HIGH);
+    write_fpga(PERIPH_REG_ADR_HIGH, 0x8888);
+    v4 = read_fpga(PERIPH_REG_ADR_HIGH);
+    write_fpga(PERIPH_REG_ADR_HIGH, 0xaaaa);
+    v5 = read_fpga(PERIPH_REG_ADR_HIGH);
+
+    serial_puts(USART1, "FSMC interface readback: ");
+    serial_output_hex(USART1, v1);
+    serial_puts(USART1, " ");
+    serial_output_hex(USART1, v2);
+    serial_puts(USART1, " ");
+    serial_output_hex(USART1, v3);
+    serial_puts(USART1, ": ");
+    serial_output_hex(USART1, v4);
+    serial_puts(USART1, " ");
+    serial_output_hex(USART1, v5);
+    serial_puts(USART1, "\r\n");
+
+    ++counter;
+    if ((ledstate = !ledstate))
+      led1_on();
+    else
+      led1_off();
+    if (counter & 2)
+      led2_on();
+    else
+      led2_off();
+    delay(MCU_HZ/3);
+  }
+}
+
+
+__attribute__((unused))
+static void
+ice40_sdram_test4(void)
+{
+  uint32_t i, j;
+  static const uint32_t fixadr = 0x00080000;
+
+  for(;;) {
+    for (i = 0; i < 32; ++i) {
+      write_sdram(((i<<3)+fixadr)<<1, (i)&0xffff);
+      if (i & 1)
+        led1_off();
+      else
+        led1_on();
+    }
+    for (i = 0; i < 32; i += 8) {
+      serial_output_hex(USART1, (((i+0)<<3)+fixadr) << 1);
+      serial_puts(USART1, ":");
+      for (j = 0; j < 8; ++j) {
+        uint16_t v = read_sdram( (((i+j)<<3)+fixadr) << 1 );
+        serial_puts(USART1, " ");
+        serial_output_hex(USART1, v);
+        if (j & 1)
+          led2_off();
+        else
+          led2_on();
+      }
+      serial_puts(USART1, "\r\n");
+    }
+    serial_puts(USART1, "\r\n");
+
     delay(MCU_HZ/3);
   }
 }
@@ -537,7 +758,7 @@ int main(void)
 
   serial_puts(USART1, "Hello world, ready to blink!\r\n");
 
-  ice40_sdram_test1();
+  ice40_sdram_test4();
 
   return 0;
 }

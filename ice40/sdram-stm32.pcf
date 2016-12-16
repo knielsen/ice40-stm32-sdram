@@ -39,12 +39,11 @@ set_io aD[14] K15
 set_io aD[15] K16
 
 # SDRAM stuff.
-set_io sdram_gpio[0] A15
-set_io sdram_gpio[1] B15
-set_io sdram_gpio[2] B14
-set_io sdram_gpio[3] B13
-set_io sdram_gpio[4] B10
-set_io sdram_gpio[5] B12
+set_io sdram_gpio1 A15
+set_io sdram_gpio2 B15
+set_io sdram_gpio3 B13
+set_io sdram_gpio4 B14
+set_io sdram_gpio5 B12
 
 set_io mem_d[0] B11
 set_io mem_d[1] A10
