@@ -230,6 +230,9 @@ module sdram_control_fsm (
             else if ((`DONE_READ_BURST && cmd_fsm_states_i == CMD_STATE_READ_DATA)|| (i_burststop_req && cmd_fsm_states_i == CMD_STATE_READ_DATA)) begin
                 write_done_i <= 1'b0;
                 read_done_i <= 1'b1;  end
+	    else if (cmd_fsm_states_i == CMD_STATE_IDLE) begin
+                write_done_i <= 1'b0;
+                read_done_i <= 1'b0;  end
         end
     end    
            

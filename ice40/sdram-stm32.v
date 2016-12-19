@@ -294,11 +294,7 @@ module top (
 
       if (st_pending_write & sdram_idle)
 	st_doing_write <= 1;
-      else if (st_doing_write & (sdram_write_done | (sdram_idle & !sdram_adv))) begin
-	// For some reason we occasionally seem to miss the sdram_write_done
-	// signal here. So added the extra condition (sdram_idle && !sdram_adv)
-	// to avoid hanging in this case. Though would be good to find the
-	// root cause of this...
+      else if (st_doing_write & sdram_write_done) begin
 	st_doing_write <= 0;
       end
       // Maybe could use sdram_ack instead of sdram_write_done, but let's keep
