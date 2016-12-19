@@ -904,19 +904,19 @@ fsmc_manual_init(void)
   fsmc_init.FSMC_WriteTimingStruct = &alttiming;
 
   /* Read timing. */
-  timing.FSMC_AddressSetupTime = 2*3;
+  timing.FSMC_AddressSetupTime = 2;
   timing.FSMC_AddressHoldTime = 0xf;
-  timing.FSMC_DataSetupTime = 10*3;
-  timing.FSMC_BusTurnAroundDuration = 2*3;
+  timing.FSMC_DataSetupTime = 12;
+  timing.FSMC_BusTurnAroundDuration = 2;
   timing.FSMC_CLKDivision = 0xf;
   timing.FSMC_DataLatency = 0xf;
   timing.FSMC_AccessMode = FSMC_AccessMode_A;
 
   /* Write timing. */
-  alttiming.FSMC_AddressSetupTime = 2*3;
+  alttiming.FSMC_AddressSetupTime = 2;
   alttiming.FSMC_AddressHoldTime = 0xf;
-  alttiming.FSMC_DataSetupTime = 8*3;
-  alttiming.FSMC_BusTurnAroundDuration = 2*3;
+  alttiming.FSMC_DataSetupTime = 8;
+  alttiming.FSMC_BusTurnAroundDuration = 2;
   alttiming.FSMC_CLKDivision = 0xf;
   alttiming.FSMC_DataLatency = 0xf;
   alttiming.FSMC_AccessMode = FSMC_AccessMode_A;

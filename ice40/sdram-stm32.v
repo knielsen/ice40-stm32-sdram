@@ -12,11 +12,15 @@ module pllclk (input ext_clock, output pll_clock, input nrst, output lock);
 
    assign bypass = 1'b0;
 
-   // DIVR=0 DIVF=71 DIVQ=3  freq=12/1*72/8 = 108 MHz
-   // DIVR=0 DIVF=47 DIVQ=4  freq=12/1*48/16 = 36 MHz
+   // DIVR=0 DIVF=71 DIVQ=3  freq=12/1*72/8 = 108   MHz
+   // DIVR=0 DIVF=52 DIVQ=3  freq=12/1*53/8 =  79.5 MHz
+   // DIVR=0 DIVF=65 DIVQ=3  freq=12/1*66/8 =  99   MHz
+   // DIVR=0 DIVF=47 DIVQ=4  freq=12/1*48/16 = 36   MHz
    SB_PLL40_CORE #(.FEEDBACK_PATH("SIMPLE"), .PLLOUT_SELECT("GENCLK"),
 		   //.DIVR(4'd0), .DIVF(7'b1000111), .DIVQ(3'b011),    // 108 MHz
-		   .DIVR(4'd0), .DIVF(7'b0101111), .DIVQ(3'b100),  // 36 MHz
+		   .DIVR(4'd0), .DIVF(7'b0110100), .DIVQ(3'b011),    // 79.5 MHz
+		   //.DIVR(4'd0), .DIVF(7'b1000001), .DIVQ(3'b011),    // 99 MHz
+		   //.DIVR(4'd0), .DIVF(7'b0101111), .DIVQ(3'b100),  // 36 MHz
 		   .FILTER_RANGE(3'b001)
    ) mypll1 (.REFERENCECLK(ext_clock),
 	    .PLLOUTGLOBAL(pll_clock), .PLLOUTCORE(dummy_out), .LOCK(lock1),
@@ -217,8 +221,8 @@ module top (
       endcase // case fsmc_r_adr
    end
 
-   assign cur_status_busy = (st_pending_write || st_doing_write ||
-			       st_pending_read || st_doing_read);
+   assign cur_status_busy = (st_pending_write | st_doing_write |
+			       st_pending_read | st_doing_read);
 
    // Decode write addresses.
    assign decode_adr_low = (fsmc_w_adr == PERIPH_REG_ADR_LOW);
@@ -227,7 +231,7 @@ module top (
 
    // Handle FSMC write, as well as updating cur_value from SDRAM read.
    always @(posedge clk) begin
-      if (fsmc_do_write && decode_adr_low) begin
+      if (fsmc_do_write & decode_adr_low) begin
 	 cur_adr[14:0] <= fsmc_w_data[15:1];
 	 // Writes to low address triggers a read/write operation.
 	 if (!cur_status_busy) begin
@@ -244,16 +248,16 @@ module top (
 	 end
       end
 
-      if (fsmc_do_write && decode_adr_high)
+      if (fsmc_do_write & decode_adr_high)
 	 cur_adr[26:15] <= fsmc_w_data[11:0];
 
-      if (fsmc_do_write && decode_data)
+      if (fsmc_do_write & decode_data)
 	cur_value <= fsmc_w_data[15:0];
-      else if (st_doing_read && sdram_data_valid)
+      else if (st_doing_read & sdram_data_valid)
 	 cur_value <= sdram_data_out;
    end
 
-   assign sdram_idle = sdram_init_done && !sdram_busy;
+   assign sdram_idle = sdram_init_done & !sdram_busy;
 
    // Handle address valid (sdram_adv) assertion - this is what starts
    // a request towards the sdram controller.
@@ -263,34 +267,34 @@ module top (
    // ToDo: could maybe assert adv already when setting _pending, to
    // allow back-to-back operation and save one clockcycle?
    always @(posedge clk) begin
-      if ((st_pending_read || st_pending_write) && sdram_idle)
+      if ((st_pending_read | st_pending_write) & sdram_idle)
 	sdram_adv <= 1;
-      else if ((st_doing_read || st_doing_write) && sdram_ack)
+      else if ((st_doing_read | st_doing_write) & sdram_ack)
 	sdram_adv <= 0;
    end
 
    // State changes.
    always @(posedge clk) begin
       // Write is triggered by writing a 1 to the low bit of address.
-      if (fsmc_do_write && decode_adr_low && !cur_status_busy && fsmc_w_data[0])
+      if (fsmc_do_write & decode_adr_low & !cur_status_busy & fsmc_w_data[0])
 	st_pending_write <= 1;
-      else if (st_pending_write && sdram_idle)
+      else if (st_pending_write & sdram_idle)
 	st_pending_write <= 0;
 
       // Read is triggered by writing a 0 to the low bit of address.
-      if (fsmc_do_write && decode_adr_low && !cur_status_busy && !fsmc_w_data[0])
+      if (fsmc_do_write & decode_adr_low & !cur_status_busy & !fsmc_w_data[0])
 	st_pending_read <= 1;
-      else if (st_pending_read && sdram_idle)
+      else if (st_pending_read & sdram_idle)
 	st_pending_read <= 0;
 
-      if (st_pending_read && sdram_idle)
+      if (st_pending_read & sdram_idle)
 	st_doing_read <= 1;
-      else if (st_doing_read && sdram_data_valid)
+      else if (st_doing_read & sdram_data_valid)
 	st_doing_read <= 0;
 
-      if (st_pending_write && sdram_idle)
+      if (st_pending_write & sdram_idle)
 	st_doing_write <= 1;
-      else if (st_doing_write && (sdram_write_done | (sdram_idle && !sdram_adv))) begin
+      else if (st_doing_write & (sdram_write_done | (sdram_idle & !sdram_adv))) begin
 	// For some reason we occasionally seem to miss the sdram_write_done
 	// signal here. So added the extra condition (sdram_idle && !sdram_adv)
 	// to avoid hanging in this case. Though would be good to find the
