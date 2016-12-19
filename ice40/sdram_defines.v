@@ -258,7 +258,7 @@ parameter COLADDR_LSB        =  0; // System address bit 0
 
 // Enable/Define this variable only if address width is 13 for SDRAM
 // CUP Data bus width also changes to 32 then
-//`define SDRAM_ADDR_WIDTH_13
+`define SDRAM_ADDR_WIDTH_13
 `ifdef SDRAM_ADDR_WIDTH_13
  `define SDRAM_ABUS_LEN 13
 `else

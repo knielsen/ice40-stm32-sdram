@@ -15,8 +15,8 @@ module pllclk (input ext_clock, output pll_clock, input nrst, output lock);
    // DIVR=0 DIVF=71 DIVQ=3  freq=12/1*72/8 = 108 MHz
    // DIVR=0 DIVF=47 DIVQ=4  freq=12/1*48/16 = 36 MHz
    SB_PLL40_CORE #(.FEEDBACK_PATH("SIMPLE"), .PLLOUT_SELECT("GENCLK"),
-		   .DIVR(4'd0), .DIVF(7'b1000111), .DIVQ(3'b011),    // 108 MHz
-		   //.DIVR(4'd0), .DIVF(7'b0101111), .DIVQ(3'b100),  // 36 MHz
+		   //.DIVR(4'd0), .DIVF(7'b1000111), .DIVQ(3'b011),    // 108 MHz
+		   .DIVR(4'd0), .DIVF(7'b0101111), .DIVQ(3'b100),  // 36 MHz
 		   .FILTER_RANGE(3'b001)
    ) mypll1 (.REFERENCECLK(ext_clock),
 	    .PLLOUTGLOBAL(pll_clock), .PLLOUTCORE(dummy_out), .LOCK(lock1),

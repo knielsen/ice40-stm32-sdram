@@ -92,12 +92,12 @@ module sdram_control_fsm (
 `include "sdram_defines.v"
 
     parameter SDRAM_DATA_WIDTH = 16;
-    parameter CPU_ADDR_WIDTH = 22;
-    parameter SDRAM_ADDR_WIDTH = 12;
+    parameter CPU_ADDR_WIDTH = 24;
+    parameter SDRAM_ADDR_WIDTH = 13;
     parameter SDRAM_BLKADR_WIDTH = 2;
     parameter SDRAM_DQM_WIDTH = 2;
-    parameter ROWADDR_MSB = 22;
-    parameter ROWADDR_LSB = 10;
+    parameter ROWADDR_MSB = 23;
+    parameter ROWADDR_LSB = 11;
     parameter AUTO_REFRESH_COUNT = 1500;
 
     parameter NUM_CLK_WRITE = 4;
@@ -767,21 +767,21 @@ module sdram_control_fsm (
                              (MODEREG_BURST_LENGTH == SDRAM_BURST_PAGE)) ? 1'b0 : 1'b1;
     generate
         if (SDRAM_COL_WIDTH == 8) begin
-            assign col_addr_i[9:0] = {2'b00, i_addr[COLADDR_MSB-1:COLADDR_LSB]};
+            assign col_addr_i[9:0] = {2'b00, i_addr[COLADDR_MSB:COLADDR_LSB]};
         end
         else if (SDRAM_COL_WIDTH == 9) begin
-            assign col_addr_i[9:0] = {1'b0, i_addr[COLADDR_MSB-1:COLADDR_LSB]};
+            assign col_addr_i[9:0] = {1'b0, i_addr[COLADDR_MSB:COLADDR_LSB]};
         end
         else if (SDRAM_COL_WIDTH == 10) begin
-            assign col_addr_i[9:0] = i_addr[COLADDR_MSB-1:COLADDR_LSB];
+            assign col_addr_i[9:0] = i_addr[COLADDR_MSB:COLADDR_LSB];
         end
         else if (SDRAM_COL_WIDTH == 11) begin
-            assign col_addr_i[11] = i_addr[COLADDR_MSB-1];
-            assign col_addr_i[9:0] = i_addr[COLADDR_MSB-2:COLADDR_LSB];
+            assign col_addr_i[11] = i_addr[COLADDR_MSB];
+            assign col_addr_i[9:0] = i_addr[COLADDR_MSB-1:COLADDR_LSB];
         end
         else if (SDRAM_COL_WIDTH == 12) begin
-            assign col_addr_i[12:11] = i_addr[COLADDR_MSB-1:COLADDR_MSB-2];
-            assign col_addr_i[9:0] = i_addr[COLADDR_MSB-3:COLADDR_LSB];
+            assign col_addr_i[12:11] = i_addr[COLADDR_MSB:COLADDR_MSB-1];
+            assign col_addr_i[9:0] = i_addr[COLADDR_MSB-2:COLADDR_LSB];
         end
     endgenerate
     

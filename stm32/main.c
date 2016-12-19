@@ -578,21 +578,22 @@ static void
 ice40_sdram_test4(void)
 {
   uint32_t i, j;
-  static const uint32_t fixadr = 0x00080000;
+  static const uint32_t fixadr = 0x00000000;
+  static const uint32_t SHIFT = 0;
 
   for(;;) {
-    for (i = 0; i < 32; ++i) {
-      write_sdram(((i<<3)+fixadr)<<1, (i)&0xffff);
+    for (i = 0; i < 128; ++i) {
+      write_sdram(((i<<SHIFT)+fixadr)<<1, ((i|(i<<8)))&0xffff);
       if (i & 1)
         led1_off();
       else
         led1_on();
     }
-    for (i = 0; i < 32; i += 8) {
-      serial_output_hex(USART1, (((i+0)<<3)+fixadr) << 1);
+    for (i = 0; i < 128; i += 8) {
+      serial_output_hex(USART1, (((i+0)<<SHIFT)+fixadr) << 1);
       serial_puts(USART1, ":");
       for (j = 0; j < 8; ++j) {
-        uint16_t v = read_sdram( (((i+j)<<3)+fixadr) << 1 );
+        uint16_t v = read_sdram( (((i+j)<<SHIFT)+fixadr) << 1 );
         serial_puts(USART1, " ");
         serial_output_hex(USART1, v);
         if (j & 1)
@@ -604,6 +605,188 @@ ice40_sdram_test4(void)
     }
     serial_puts(USART1, "\r\n");
 
+    delay(MCU_HZ/3);
+  }
+}
+
+
+__attribute__((unused))
+static void
+ice40_sdram_test5(void)
+{
+  uint32_t i, j;
+
+  for(;;) {
+    led1_on();
+    for (i = 0; i < 0x10000; ++i) {
+      write_sdram(i<<1, i&0xffff);
+    }
+    led1_off();
+    led2_on();
+    j = 0;
+    for (i = 0; i < 0x10000; ++i) {
+      uint16_t v = read_sdram(i<<1);
+      if (v != (i&0xffff)) {
+        ++j;
+        if (j <= 10) {
+          serial_puts(USART1, "  ");
+          serial_output_hex(USART1, i);
+          serial_puts(USART1, "  ");
+          print_uint32(USART1, v);
+          serial_puts(USART1, " != ");
+          print_uint32(USART1, (i&0xffff));
+          serial_puts(USART1, "\r\n");
+        }
+      }
+    }
+    led2_off();
+    serial_puts(USART1, "Errors: ");
+    println_uint32(USART1, j);
+
+    delay(MCU_HZ/3);
+  }
+}
+
+
+__attribute__((unused))
+static void
+ice40_sdram_test6(void)
+{
+  uint32_t i;
+
+  i = 0;
+  for(;;) {
+    uint16_t v1, v2;
+
+    led1_on();
+    write_sdram(0, i&0xffff);
+    write_sdram(8, (~i)&0xffff);
+    v2 = read_sdram(8);
+    v1 = read_sdram(0);
+    serial_output_hex(USART1, i);
+    serial_puts(USART1, "  ");
+    serial_output_hex(USART1, v1);
+    serial_puts(USART1, " ");
+    serial_output_hex(USART1, v2);
+    serial_puts(USART1, "\r\n");
+    led1_off();
+
+    ++i;
+    delay(MCU_HZ/3);
+  }
+}
+
+
+__attribute__((unused))
+static void
+ice40_sdram_test7(void)
+{
+  uint32_t i, j;
+
+  i = 0;
+  for(;;) {
+    uint16_t v1, v2;
+
+    led1_on();
+    for (j = 0; j < 24; ++j) {
+      write_sdram((1<<j)<<1, i&0xffff);
+      write_sdram(0, (~i)&0xffff);
+    }
+    for (j = 0; j < 24; ++j) {
+      v1 = read_sdram((1<<j)<<1);
+      v2 = read_sdram(0);
+      print_uint32(USART1, j);
+      serial_puts(USART1, "  ");
+      serial_output_hex(USART1, v1);
+      serial_puts(USART1, "  ");
+      serial_output_hex(USART1, v2);
+      serial_puts(USART1, "\r\n");
+    }
+    led1_off();
+
+    ++i;
+    delay(MCU_HZ/3);
+  }
+}
+
+
+/*
+  Mem-test a range of adresses. Repeatedly write values and re-read to check
+  if the same values can be read back.
+*/
+__attribute__((unused))
+static void
+ice40_sdram_test8(void)
+{
+  static const uint32_t TOP = (1<<24);
+  uint32_t i, j;
+  uint32_t errors, first_error_adr, first_error_val, first_error_expected;
+
+  i = 0;
+  for(;;) {
+    led1_on();
+    for (j = 0; j < TOP; ++j) {
+      //uint32_t byte_adr = ( ((j&0xffffff00)<<1) | (j&0xff) )<<1;
+      uint32_t byte_adr = j<<1;
+      uint16_t v = (i+j+(j>>8)+(j>>16)+(j>>24)) & 0xffff;
+      write_sdram(byte_adr, v);
+    }
+    errors = 0;
+    first_error_adr = 0;
+    first_error_val = 0;
+    first_error_expected = 0;
+    for (j = 0; j < TOP; ++j) {
+      //uint32_t byte_adr = ( ((j&0xffffff00)<<1) | (j&0xff) )<<1;
+      uint32_t byte_adr = j<<1;
+      uint16_t expected = (i+j+(j>>8)+(j>>16)+(j>>24)) & 0xffff;
+      uint16_t v = read_sdram(byte_adr);
+      if (v != expected) {
+        if (errors == 0) {
+          first_error_adr = byte_adr>>1;
+          first_error_val = v;
+          first_error_expected = expected;
+        }
+        ++errors;
+      }
+    }
+
+    serial_output_hex(USART1, i);
+    serial_puts(USART1, "  Errors: ");
+    print_uint32(USART1, errors);
+    serial_puts(USART1, "  adr=");
+    serial_output_hex(USART1, first_error_adr);
+    serial_puts(USART1, "  val=");
+    serial_output_hex(USART1, first_error_val);
+    serial_puts(USART1, "  expected=");
+    serial_output_hex(USART1, first_error_expected);
+    serial_puts(USART1, "\r\n");
+    ++i;
+    led1_off();
+
+    delay(MCU_HZ/3);
+  }
+}
+
+
+__attribute__((unused))
+static void
+ice40_sdram_test9(void)
+{
+  for(;;) {
+    uint16_t v1, v2;
+    static const uint32_t a8_row_word = 1<<(8+2+9+1);
+
+    write_sdram(0+a8_row_word, 0xffff);
+    write_sdram(512+a8_row_word, 0x0000);
+    v1 = read_sdram(0+a8_row_word);
+    v2 = read_sdram(512+a8_row_word);
+
+/*
+    serial_output_hex(USART1, v1);
+    serial_puts(USART1, "  ");
+    serial_output_hex(USART1, v2);
+    serial_puts(USART1, "\r\n");
+*/
     delay(MCU_HZ/3);
   }
 }
@@ -721,19 +904,19 @@ fsmc_manual_init(void)
   fsmc_init.FSMC_WriteTimingStruct = &alttiming;
 
   /* Read timing. */
-  timing.FSMC_AddressSetupTime = 2;
+  timing.FSMC_AddressSetupTime = 2*3;
   timing.FSMC_AddressHoldTime = 0xf;
-  timing.FSMC_DataSetupTime = 10;
-  timing.FSMC_BusTurnAroundDuration = 2;
+  timing.FSMC_DataSetupTime = 10*3;
+  timing.FSMC_BusTurnAroundDuration = 2*3;
   timing.FSMC_CLKDivision = 0xf;
   timing.FSMC_DataLatency = 0xf;
   timing.FSMC_AccessMode = FSMC_AccessMode_A;
 
   /* Write timing. */
-  alttiming.FSMC_AddressSetupTime = 2;
+  alttiming.FSMC_AddressSetupTime = 2*3;
   alttiming.FSMC_AddressHoldTime = 0xf;
-  alttiming.FSMC_DataSetupTime = 8;
-  alttiming.FSMC_BusTurnAroundDuration = 2;
+  alttiming.FSMC_DataSetupTime = 8*3;
+  alttiming.FSMC_BusTurnAroundDuration = 2*3;
   alttiming.FSMC_CLKDivision = 0xf;
   alttiming.FSMC_DataLatency = 0xf;
   alttiming.FSMC_AccessMode = FSMC_AccessMode_A;
@@ -758,7 +941,7 @@ int main(void)
 
   serial_puts(USART1, "Hello world, ready to blink!\r\n");
 
-  ice40_sdram_test4();
+  ice40_sdram_test8();
 
   return 0;
 }

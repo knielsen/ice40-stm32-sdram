@@ -91,10 +91,10 @@ module sdram_controller (/*AUTOARG*/
     parameter SDRAM_DATA_WIDTH = 16;
     defparam U0.SDRAM_DATA_WIDTH = SDRAM_DATA_WIDTH;
 
-    parameter CPU_ADDR_WIDTH = 22;
+    parameter CPU_ADDR_WIDTH = 24;
     defparam U0.CPU_ADDR_WIDTH = CPU_ADDR_WIDTH;
 
-    parameter SDRAM_ADDR_WIDTH = 12;
+    parameter SDRAM_ADDR_WIDTH = 13;
     defparam U0.SDRAM_ADDR_WIDTH = SDRAM_ADDR_WIDTH;
 
     parameter SDRAM_BLKADR_WIDTH = 2;
@@ -103,16 +103,16 @@ module sdram_controller (/*AUTOARG*/
     parameter SDRAM_DQM_WIDTH = 2;
     defparam U0.SDRAM_DQM_WIDTH = SDRAM_DQM_WIDTH;
 
-    parameter ROWADDR_MSB = 22;
+    parameter ROWADDR_MSB = 23;
     defparam U0.ROWADDR_MSB = ROWADDR_MSB;
    
-    parameter ROWADDR_LSB = 10;
+    parameter ROWADDR_LSB = 11;
     defparam U0.ROWADDR_LSB = ROWADDR_LSB;
 
     parameter MODEREG_CAS_LATENCY = 2;
     defparam U0.MODEREG_CAS_LATENCY = MODEREG_CAS_LATENCY;
 
-    parameter MODEREG_BURST_LENGTH = 3'b010;
+    parameter MODEREG_BURST_LENGTH = 3'b000;
     defparam U0.MODEREG_BURST_LENGTH = MODEREG_BURST_LENGTH;
 
     parameter MODEREG_BURST_TYPE = 1'b0;
